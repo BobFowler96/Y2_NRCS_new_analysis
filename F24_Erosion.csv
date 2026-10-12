@@ -1,0 +1,73 @@
+Project,Site,Texture,Season,Deployment,Start_date,End_date,Dep_days,Rep,Plot,Trt,Trt_type,Precip_cumul_in,Precip_cumul_mm,Mass_g,ER_kgha,ER_lbac,ER_gm2day
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,103,C,No CC,2.51,63.75,1.46,629.52,561.64,2.35
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,204,C,No CC,2.51,63.75,1.00,431.81,385.25,1.61
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,301,C,No CC,2.51,63.75,1.31,563.64,502.87,2.11
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,403,C,No CC,2.51,63.75,2.12,912.65,814.25,3.41
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,106,O1,Oat + Radish,2.51,63.75,0.71,305.65,272.70,1.14
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,209,O1,Oat + Radish,2.51,63.75,1.23,531.31,474.02,1.99
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,305,O1,Oat + Radish,2.51,63.75,1.01,435.38,388.44,1.63
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,407,O1,Oat + Radish,2.51,63.75,1.04,448.64,400.27,1.68
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,108,O2,Oat + Radish,2.51,63.75,0.69,298.55,266.36,1.12
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,203,O2,Oat + Radish,2.51,63.75,1.19,511.07,455.97,1.91
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,303,O2,Oat + Radish,2.51,63.75,0.86,372.17,332.04,1.39
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,401,O2,Oat + Radish,2.51,63.75,1.96,845.66,754.48,3.16
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,109,O3,Oat + Radish,2.51,63.75,0.60,257.34,229.60,0.96
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,201,O3,Oat + Radish,2.51,63.75,0.91,390.77,348.64,1.46
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,302,O3,Oat + Radish,2.51,63.75,1.90,818.23,730.01,3.06
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,406,O3,Oat + Radish,2.51,63.75,0.81,349.10,311.46,1.31
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,105,O4,Oat + Radish,2.51,63.75,0.93,402.40,359.01,1.50
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,206,O4,Oat + Radish,2.51,63.75,1.34,575.05,513.05,2.15
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,307,O4,Oat + Radish,2.51,63.75,1.00,432.54,385.90,1.62
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,408,O4,Oat + Radish,2.51,63.75,1.16,498.07,444.37,1.86
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,107,R1,Cereal Rye,2.51,63.75,0.93,399.17,356.13,1.49
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,202,R1,Cereal Rye,2.51,63.75,0.37,158.23,141.17,0.59
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,306,R1,Cereal Rye,2.51,63.75,1.24,535.18,477.48,2.00
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,405,R1,Cereal Rye,2.51,63.75,0.74,319.52,285.07,1.20
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,104,R2,Cereal Rye,2.51,63.75,0.78,337.43,301.05,1.26
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,207,R2,Cereal Rye,2.51,63.75,1.33,571.52,509.90,2.14
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,308,R2,Cereal Rye,2.51,63.75,1.26,541.34,482.97,2.02
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,402,R2,Cereal Rye,2.51,63.75,0.87,372.47,332.31,1.39
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,101,R3,Cereal Rye,2.51,63.75,0.22,95.93,85.58,0.36
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,205,R3,Cereal Rye,2.51,63.75,1.00,428.79,382.56,1.60
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,309,R3,Cereal Rye,2.51,63.75,0.55,235.56,210.16,0.88
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,404,R3,Cereal Rye,2.51,63.75,0.88,379.41,338.50,1.42
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,1,102,R4,Cereal Rye,2.51,63.75,0.64,276.59,246.77,1.03
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,2,208,R4,Cereal Rye,2.51,63.75,0.64,273.53,244.04,1.02
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,3,304,R4,Cereal Rye,2.51,63.75,0.56,241.24,215.23,0.90
+NRCS CC,Saint Paul,Waukegan silt loam,F24,D1,2024-10-19,2024-11-14,27,4,409,R4,Cereal Rye,2.51,63.75,0.63,269.36,240.31,1.01
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,108,C,No CC,2.26,57.40,0.31,132.01,117.78,0.30
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,205,C,No CC,2.26,57.40,2.52,1086.94,969.74,2.49
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,308,C,No CC,2.26,57.40,1.31,561.88,501.29,1.29
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,402,C,No CC,2.26,57.40,1.00,432.19,385.59,0.99
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,107,O1,Oat + Radish,2.26,57.40,0.36,155.82,139.02,0.36
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,208,O1,Oat + Radish,2.26,57.40,0.69,298.98,266.74,0.69
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,303,O1,Oat + Radish,2.26,57.40,0.50,213.60,190.57,0.49
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,409,O1,Oat + Radish,2.26,57.40,0.90,388.23,346.37,0.89
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,101,O2,Oat + Radish,2.26,57.40,0.66,283.65,253.07,0.65
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,204,O2,Oat + Radish,2.26,57.40,0.76,325.33,290.25,0.75
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,305,O2,Oat + Radish,2.26,57.40,0.55,236.16,210.70,0.54
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,403,O2,Oat + Radish,2.26,57.40,0.50,217.09,193.68,0.50
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,109,O3,Oat + Radish,2.26,57.40,0.69,299.19,266.93,0.69
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,203,O3,Oat + Radish,2.26,57.40,0.41,175.06,156.19,0.40
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,302,O3,Oat + Radish,2.26,57.40,0.34,145.70,129.99,0.33
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,401,O3,Oat + Radish,2.26,57.40,0.45,195.86,174.74,0.45
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,105,O4,Oat + Radish,2.26,57.40,0.55,237.67,212.04,0.55
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,209,O4,Oat + Radish,2.26,57.40,0.49,213.00,190.03,0.49
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,306,O4,Oat + Radish,2.26,57.40,0.38,163.65,146.01,0.38
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,407,O4,Oat + Radish,2.26,57.40,0.32,137.48,122.65,0.32
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,103,R1,Cereal Rye,2.26,57.40,0.71,303.71,270.97,0.70
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,201,R1,Cereal Rye,2.26,57.40,0.79,341.90,305.04,0.78
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,309,R1,Cereal Rye,2.26,57.40,0.90,386.90,345.18,0.89
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,408,R1,Cereal Rye,2.26,57.40,0.91,393.05,350.68,0.90
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,104,R2,Cereal Rye,2.26,57.40,2.30,990.32,883.55,2.27
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,202,R2,Cereal Rye,2.26,57.40,0.64,274.87,245.23,0.63
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,301,R2,Cereal Rye,2.26,57.40,0.90,385.74,344.15,0.89
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,404,R2,Cereal Rye,2.26,57.40,0.69,296.18,264.25,0.68
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,106,R3,Cereal Rye,2.26,57.40,0.57,246.71,220.11,0.57
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,206,R3,Cereal Rye,2.26,57.40,0.29,125.08,111.59,0.29
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,307,R3,Cereal Rye,2.26,57.40,0.55,236.55,211.04,0.54
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,406,R3,Cereal Rye,2.26,57.40,0.41,176.18,157.19,0.40
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,1,102,R4,Cereal Rye,2.26,57.40,0.77,330.37,294.75,0.76
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,2,207,R4,Cereal Rye,2.26,57.40,0.68,293.64,261.98,0.67
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,3,304,R4,Cereal Rye,2.26,57.40,0.66,283.09,252.57,0.65
+NRCS CC,Waseca,Nicollet clay loam,F24,D1,2024-10-03,2024-11-15,44,4,405,R4,Cereal Rye,2.26,57.40,0.42,180.06,160.64,0.41

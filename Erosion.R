@@ -45,7 +45,7 @@ color_map <- c(
 color_map_type = c(
   "No CC"        = "#636363", # Soft charcoal
   "Oat + Radish" = "#E6550D", # Vivid amber-orange
-  "Cereal Rye"   = "#3182BD"  # Mid-tone steel blue
+  "Cereal Rye"   = "#3182BD"  # Mid-tone steel blue 
 )
 
 #----OBJECT REMOVAL, ENVIRONMENT CLEANUP----

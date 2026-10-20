@@ -20,6 +20,8 @@ library("carData")
 library("performance")
 library("googlesheets4")
 library("tibble")
+library("ggpattern")
+library("broom")
 
 
 #---- COLOR PALETTE FOR TREATMENTS AND TREATMENT TYPE----
@@ -202,6 +204,33 @@ S25_AGBM_clean <- S25_AGBM_CN %>%
 
 Y1_AGBMcomb_dat <- bind_rows(F24_AGBM_CN, S25_AGBM_CN_novolunteer)
 
+Y1_AGBMcomb_dat = Y1_AGBMcomb_dat %>% mutate(
+  Season_gen = case_when(
+    Season == "F24" ~ "Fall",
+    Season == "S25" ~ "Spring",
+    TRUE        ~ NA_character_ ),
+  Season_gen = factor(Season_gen, levels = c("Fall", "Spring")))
+
+
+
+F25_AGBM_CN <- F25_AGBM_CN %>%
+  mutate(across(c(C_kgha, C_lbac, N_kgha, AGBM_kgha, AGBM_mgha), as.numeric))
+
+S26_AGBM_CN <- S26_AGBM_CN %>%
+  mutate(across(c(C_kgha, C_lbac, N_kgha, AGBM_kgha, AGBM_mgha), as.numeric))
+
+Y2_AGBMcomb_dat <- bind_rows(F25_AGBM_CN, S26_AGBM_CN)
+
+
+
+Y2_AGBMcomb_dat = Y2_AGBMcomb_dat %>% mutate(
+  Season_gen = case_when(
+    Season == "F25" ~ "Fall",
+    Season == "S26" ~ "Spring",
+    TRUE        ~ NA_character_ ),
+  Season_gen = factor(Season_gen, levels = c("Fall", "Spring")))
+
+
 #----EXPLORING THE DATA----
 # ==============================================================================
 # 1. Generate Descriptive Statistics Dataframe
@@ -264,7 +293,7 @@ ggplot(F24_AGBM_CN, aes(x = Trt, y = AGBM_kgha, fill = Treatment_Full)) +
 
 #----MODEL----
 
-F24_CCBM_MOD = lmer(AGBM_kgha ~ Treatment_Full * Site + (1|Site:Rep),
+F24_CCBM_MOD = lmer(AGBM_mgha ~ Treatment_Full * Site + (1|Site:Rep),
                               data = F24_AGBM_CN)
 
 #----CHECKING MODEL----
@@ -289,7 +318,7 @@ par(mfrow = c(1, 1))
 #----TRANSFORMING THE MODEL----
 # 1. Fit the log-transformed model (using the cleaned data)
 F24_CCBM_logMOD <- lmer(
-  log(AGBM_kgha) ~ Treatment_Full * Site + (1|Site:Rep),
+  log(AGBM_mgha) ~ Treatment_Full * Site + (1|Site:Rep),
   data = F24_AGBM_CN)
 
 # 2. Run diagnostics on the log-transformed model to verify correction
@@ -492,7 +521,7 @@ F24_plot_site_CCBM <- function(site_name) {
     scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
     labs(
       title = paste("Fall 2024 Cover Crop Shoot Biomass:", site_name),
-      y = expression("Estimated Mean CC Biomass (kg ha"^{-1}*")"),
+      y = expression("Estimated Mean CC Biomass (Mg ha"^{-1}*")"),
       x = "Treatment",
       caption = paste0(
         "Bars represent back-transformed emmeans.\n",
@@ -583,7 +612,7 @@ S25_CCBM_summary %>%
 
 #----CC AGBM EXPLORATORY BOXPLOT----
 
-ggplot(S25_AGBM_CN_novolunteer, aes(x = Trt, y = AGBM_kgha, fill = Treatment_Full)) +
+ggplot(S25_AGBM_CN_novolunteer, aes(x = Trt, y = AGBM_mgha, fill = Treatment_Full)) +
   geom_boxplot() +
   facet_wrap(~ Site) +
   scale_fill_manual(values = color_map) + 
@@ -600,7 +629,7 @@ ggplot(S25_AGBM_CN_novolunteer, aes(x = Trt, y = AGBM_kgha, fill = Treatment_Ful
 
 #----MODEL----
 
-S25_CCBM_MOD = lm(AGBM_kgha ~ Treatment_Full * Site,
+S25_CCBM_MOD = lm(AGBM_mgha ~ Treatment_Full * Site,
                     data = S25_AGBM_CN_novolunteer)
 
 #----CHECKING MODEL----
@@ -622,6 +651,20 @@ par(mfrow = c(1, 1))
 
 
 
+S25_CCBM_logMOD <- lmer(
+  log(AGBM_mgha) ~ Treatment_Full * Site + (1|Site:Rep),
+  data = S25_AGBM_CN_novolunteer)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(S25_CCBM_logMOD), residuals(S25_CCBM_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(S25_CCBM_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(S25_CCBM_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
 
 #----MODEL SUMMARY AND ANOVA----
 # 1. Generate the standard model parameter summary
@@ -629,8 +672,8 @@ summary(S25_CCBM_MOD)
 
 
 # 2. Get Type III ANOVA table (standard classical F-tests for lm)
-S25_CCBM_ANOVA <- car::Anova(S25_CCBM_MOD, type = "III")
-S25_CCBM_ANOVA
+S25_CCBM_logANOVA <- anova(S25_CCBM_logMOD, type = 3, ddf = "Satterthwaite")
+print(S25_CCBM_logANOVA)
 # ==============================================================================
 # FORMATTED ANOVA AND EXPORT
 # ==============================================================================
@@ -813,10 +856,591 @@ S25_CCBM_plot_Lamberton
 
 
 
+#---- Y1 Biomass Combined Fall and spring biomass emmeans and plot----
+
+# ==============================================================================
+# 1. FALL 2024 EMMEANS, CLD (CAPITAL LETTERS) & REGRID
+# ==============================================================================
+F24_emm_log <- emmeans(F24_CCBM_logMOD, ~ Treatment_Full | Site)
+
+F24_cld <- cld(
+  F24_emm_log,
+  alpha = 0.05,
+  Letters = letters,  # Capital letters for Fall
+  adjust = "tukey",
+  decreasing = TRUE
+)
+
+F24_plot_data <- regrid(F24_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F24_cld) %>% select(Treatment_Full, Site, .group),
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(
+    Letter = trimws(.group),
+    Season_gen = "Fall"
+  )
+F24_plot_data
+# ==============================================================================
+# 2. SPRING 2025 EMMEANS, CLD (LOWERCASE LETTERS) & REGRID
+# ==============================================================================
+S25_emm_log <- emmeans(S25_CCBM_logMOD, ~ Treatment_Full | Site)
+
+S25_cld <- cld(
+  S25_emm_log,
+  alpha = 0.05,
+  Letters = LETTERS,  # Lowercase letters for Spring
+  adjust = "tukey",
+  decreasing = TRUE
+)
+
+S25_plot_data <- regrid(S25_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(S25_cld) %>% select(Treatment_Full, Site, .group),
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(
+    Letter = trimws(.group),
+    Season_gen = "Spring"
+  )
+S25_plot_data
+# ==============================================================================
+# 3. MERGE DATASETS & WRANGLE N.S. WRAPPERS
+# ==============================================================================
+
+
+# ==============================================================================
+# 1. COMBINED BACK-TRANSFORMED DATASET
+# ==============================================================================
+Y1_CCBM_plot_dat <- bind_rows(F24_plot_data, S25_plot_data) %>%
+  mutate(
+    Season_gen = factor(Season_gen, levels = c("Fall", "Spring"))
+  )
+
+# ==============================================================================
+# 2. SITE PLOTTING FUNCTION
+# ==============================================================================
+Y1_plot_site_textured_CCBM <- function(site_name, data = Y1_CCBM_plot_dat) {
+  
+  data %>%
+    filter(Site == site_name) %>%
+    ggplot(aes(x = Treatment_Full, y = response, fill = Treatment_Full, pattern = Season_gen)) +
+    # Clustered side-by-side textured bars
+    geom_bar_pattern(
+      stat = "identity",
+      position = position_dodge(width = 0.8),
+      width = 0.7,
+      color = "black",
+      alpha = 0.85,
+      pattern_color = "black",
+      pattern_fill = "black",
+      pattern_angle = 45,
+      pattern_density = 0.1,
+      pattern_spacing = 0.025
+    ) +
+    # Error bars
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.25,
+      linewidth = 0.5
+    ) +
+    # Tukey letters (Capital for Fall, Lowercase for Spring)
+    geom_text(
+      aes(label = Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.8,
+      fontface = "bold"
+    ) +
+    # Color Map & Pattern Mapping
+    scale_fill_manual(values = color_map, name = "Cover Crop Treatment") +
+    scale_pattern_manual(
+      values = c("Fall" = "stripe", "Spring" = "none"),
+      name = "Season"
+    ) +
+    # Legend Formatting: Wrap Treatment legend into 2 rows to fit width
+    guides(
+      fill = guide_legend(
+        nrow = 2, 
+        byrow = TRUE, 
+        override.aes = list(pattern = "none")
+      ),
+      pattern = guide_legend(
+        nrow = 1, 
+        override.aes = list(fill = "white")
+      )
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.18))) +
+    labs(
+      x = "Cover Crop Treatment",
+      y = expression("Estimated Mean CC Biomass (Mg ha"^-1*")")
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black", size = 10),
+      axis.text.y = element_text(color = "black", size = 10),
+      axis.title = element_text(face = "bold"),
+      legend.position = "bottom",
+      legend.box = "vertical",       # Stacks Treatment and Season legends vertically
+      legend.spacing.y = unit(0.2, "cm"),
+      legend.text = element_text(size = 9),
+      legend.title = element_text(face = "bold", size = 10),
+      plot.title = element_text(face = "bold", size = 12)
+    )
+}
+
+# ==============================================================================
+# 3. GENERATE INDIVIDUAL SITE PLOTS
+# ==============================================================================
+Y1_CCBM_plot_StPaul    <- Y1_plot_site_textured_CCBM ("Saint Paul")
+Y1_CCBM_plot_Waseca    <- Y1_plot_site_textured_CCBM ("Waseca")
+Y1_CCBM_plot_Lamberton <- Y1_plot_site_textured_CCBM ("Lamberton")
+
+# Display in RStudio
+Y1_CCBM_plot_StPaul
+Y1_CCBM_plot_Waseca
+Y1_CCBM_plot_Lamberton
+
+
+
+
+
+# ==============================================================================
+# 1. SITE PLOTTING FUNCTION
+# ==============================================================================
+Y1_plot_site_textured_CCBM <- function(site_name, data = Y1_CCBM_plot_dat) {
+  
+  data %>%
+    filter(Site == site_name) %>%
+    ggplot(aes(x = Treatment_Full, y = response, fill = Treatment_Full, pattern = Season_gen)) +
+    # Clustered side-by-side textured bars
+    geom_bar_pattern(
+      stat = "identity",
+      position = position_dodge(width = 0.8),
+      width = 0.7,
+      color = "black",
+      alpha = 0.85,
+      pattern_color = "black",
+      pattern_fill = "black",
+      pattern_angle = 45,
+      pattern_density = 0.1,
+      pattern_spacing = 0.025
+    ) +
+    # Error bars
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.25,
+      linewidth = 0.5
+    ) +
+    # Tukey letters (Capital for Fall, Lowercase for Spring)
+    geom_text(
+      aes(label = Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.8,
+      fontface = "bold"
+    ) +
+    # Color Map & Pattern Mapping
+    scale_fill_manual(values = color_map, name = "Cover Crop Treatment") +
+    scale_pattern_manual(
+      values = c("Fall" = "stripe", "Spring" = "none"),
+      name = "Season"
+    ) +
+    # Legend Formatting
+    guides(
+      fill = guide_legend(
+        nrow = 2, 
+        byrow = TRUE, 
+        override.aes = list(pattern = "none")
+      ),
+      pattern = guide_legend(
+        nrow = 1, 
+        override.aes = list(fill = "white")
+      )
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.18))) +
+    labs(
+      subtitle = paste(site_name),
+      x = NULL,
+      y = expression(bold("Estimated Mean CC Biomass (Mg ha")^bold("-1")*bold(")"))
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black", size = 12, face = "bold"),
+      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 12, color = "black", face = "bold"),
+      legend.position = "bottom",
+      legend.box = "vertical",
+      legend.spacing.y = unit(0.2, "cm"),
+      legend.text = element_text(size = 9),
+      legend.title = element_text(face = "bold", size = 10),
+      plot.subtitle = element_text(face = "bold", size = 11)
+    )
+}
+
+# ==============================================================================
+# 2. GENERATE SUBPLOTS & ASSEMBLE PATCHWORK
+# ==============================================================================
+Y1_CCBM_plot_StPaul    <- Y1_plot_site_textured_CCBM("Saint Paul")
+Y1_CCBM_plot_Waseca    <- Y1_plot_site_textured_CCBM("Waseca")
+Y1_CCBM_plot_Lamberton <- Y1_plot_site_textured_CCBM("Lamberton")
+
+# Suppress x-axis text/ticks on top two subplots (St. Paul & Waseca)
+Y1_CCBM_plot_StPaul <- Y1_CCBM_plot_StPaul + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+Y1_CCBM_plot_Waseca <- Y1_CCBM_plot_Waseca + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+# Stack plots into patchwork
+Y1_CCBM_composite_figure <- (Y1_CCBM_plot_StPaul / Y1_CCBM_plot_Waseca / Y1_CCBM_plot_Lamberton) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    tag_levels = "a", 
+    tag_prefix = "(", 
+    tag_suffix = ")"
+  ) &
+  theme(
+    legend.position = "bottom",
+    legend.box.margin = margin(t = 5, r = 30, b = 5, l = 0), # Adds right-side padding to prevent clipping
+    legend.justification = "center",
+    plot.tag = element_text(face = "bold", size = 11, family = "serif"),
+    plot.title = element_text(face = "bold", size = 13, family = "serif"),
+    plot.caption = element_text(face = "bold", size = 11, family = "serif", hjust = 0.5, margin = margin(t = 5, b = 5))
+  )
+
+# ==============================================================================
+# 3. DIRECT DISK EXPORT
+# ==============================================================================
+ggsave(
+  filename = "Y1_Composite_CCBM_By_Site.png",
+  plot = Y1_CCBM_composite_figure,
+  width = 8.5,
+  height = 12,
+  dpi = 300,
+  device = "png"
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#----Y2 CCBM combined plot----
+
+
+#----F25 model and anova----
+
+F25_CCBM_MOD = lmer(AGBM_mgha ~ Treatment_Full * Site + (1|Site:Rep),
+                  data = F25_AGBM_CN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(F25_CCBM_MOD), residuals(F25_CCBM_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(F25_CCBM_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(F25_CCBM_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+
+
+F25_CCBM_logMOD <- lmer(
+  log(AGBM_mgha) ~ Treatment_Full * Site + (1|Site:Rep),
+  data = F25_AGBM_CN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(F25_CCBM_logMOD), residuals(F25_CCBM_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(F25_CCBM_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(F25_CCBM_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(F25_CCBM_MOD)
+
+
+# 2. Get Type III ANOVA table (standard classical F-tests for lm)
+F25_CCBM_logANOVA <- anova(F25_CCBM_logMOD, type = 3, ddf = "Satterthwaite")
+print(F25_CCBM_logANOVA)
+
+
+
+
+#----S26 model and anova----
+
+S26_CCBM_MOD = lmer(AGBM_mgha ~ Treatment_Full * Site + (1|Site:Rep),
+                  data = S26_AGBM_CN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(S26_CCBM_MOD), residuals(S26_CCBM_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(S26_CCBM_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(S26_CCBM_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+
+
+S26_CCBM_logMOD <- lmer(
+  log(AGBM_mgha) ~ Treatment_Full * Site + (1|Site:Rep),
+  data = S26_AGBM_CN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(S26_CCBM_logMOD), residuals(S26_CCBM_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(S26_CCBM_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(S26_CCBM_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(S26_CCBM_MOD)
+
+
+# 2. Get Type III ANOVA table (standard classical F-tests for lm)
+S26_CCBM_logANOVA <- anova(S26_CCBM_logMOD, type = 3, ddf = "Satterthwaite")
+print(S26_CCBM_logANOVA)
+
+
+
+
+#----Y2 Biomass Combined Fall and spring biomass emmeans and plot----
+
+# ==============================================================================
+# 1. FALL 2024 EMMEANS, CLD (CAPITAL LETTERS) & REGRID
+# ==============================================================================
+F25_emm_log <- emmeans(F25_CCBM_logMOD, ~ Treatment_Full | Site)
+
+F25_cld <- cld(
+  F25_emm_log,
+  alpha = 0.05,
+  Letters = letters,  # Capital letters for Fall
+  adjust = "tukey",
+  decreasing = TRUE
+)
+
+F25_plot_data <- regrid(F25_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F25_cld) %>% select(Treatment_Full, Site, .group),
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(
+    Letter = trimws(.group),
+    Season_gen = "Fall"
+  )
+F25_plot_data
+# ==============================================================================
+# 2. SPRING 2025 EMMEANS, CLD (LOWERCASE LETTERS) & REGRID
+# ==============================================================================
+S26_emm_log <- emmeans(S26_CCBM_logMOD, ~ Treatment_Full | Site)
+
+S26_cld <- cld(
+  S26_emm_log,
+  alpha = 0.05,
+  Letters = LETTERS,  # Lowercase letters for Spring
+  adjust = "tukey",
+  decreasing = TRUE
+)
+
+S26_plot_data <- regrid(S26_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(S26_cld) %>% select(Treatment_Full, Site, .group),
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(
+    Letter = trimws(.group),
+    Season_gen = "Spring"
+  )
+S26_plot_data
+# ==============================================================================
+# 3. MERGE DATASETS & WRANGLE N.S. WRAPPERS
+# ==============================================================================
+
+
+# ==============================================================================
+# 1. COMBINED BACK-TRANSFORMED DATASET
+# ==============================================================================
+Y2_CCBM_plot_dat <- bind_rows(F25_plot_data, S26_plot_data) %>%
+  mutate(
+    Season_gen = factor(Season_gen, levels = c("Fall", "Spring"))
+  )
+
+
+# ==============================================================================
+# 1. SITE PLOTTING FUNCTION
+# ==============================================================================
+Y2_plot_site_textured_CCBM <- function(site_name, data = Y2_CCBM_plot_dat) {
+  
+  data %>%
+    filter(Site == site_name) %>%
+    ggplot(aes(x = Treatment_Full, y = response, fill = Treatment_Full, pattern = Season_gen)) +
+    # Clustered side-by-side textured bars
+    geom_bar_pattern(
+      stat = "identity",
+      position = position_dodge(width = 0.8),
+      width = 0.7,
+      color = "black",
+      alpha = 0.85,
+      pattern_color = "black",
+      pattern_fill = "black",
+      pattern_angle = 45,
+      pattern_density = 0.1,
+      pattern_spacing = 0.025
+    ) +
+    # Error bars
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.25,
+      linewidth = 0.5
+    ) +
+    # Tukey letters (Capital for Fall, Lowercase for Spring)
+    geom_text(
+      aes(label = Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.8,
+      fontface = "bold"
+    ) +
+    # Color Map & Pattern Mapping
+    scale_fill_manual(values = color_map, name = "Cover Crop Treatment") +
+    scale_pattern_manual(
+      values = c("Fall" = "stripe", "Spring" = "none"),
+      name = "Season"
+    ) +
+    # Legend Formatting
+    guides(
+      fill = guide_legend(
+        nrow = 2, 
+        byrow = TRUE, 
+        override.aes = list(pattern = "none")
+      ),
+      pattern = guide_legend(
+        nrow = 1, 
+        override.aes = list(fill = "white")
+      )
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.18))) +
+    labs(
+      subtitle = paste(site_name),
+      x = NULL,
+      y = expression(bold("Estimated Mean CC Biomass (Mg ha")^bold("-1")*bold(")"))
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black", size = 12, face = "bold"),
+      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(size = 12, color = "black", face = "bold"),
+      legend.position = "bottom",
+      legend.box = "vertical",
+      legend.spacing.y = unit(0.2, "cm"),
+      legend.text = element_text(size = 9),
+      legend.title = element_text(face = "bold", size = 10),
+      plot.subtitle = element_text(face = "bold", size = 11)
+    )
+}
+
+# ==============================================================================
+# 2. GENERATE SUBPLOTS & ASSEMBLE PATCHWORK
+# ==============================================================================
+Y2_CCBM_plot_StPaul    <- Y2_plot_site_textured_CCBM("Saint Paul")
+Y2_CCBM_plot_Waseca    <- Y2_plot_site_textured_CCBM("Waseca")
+Y2_CCBM_plot_Lamberton <- Y2_plot_site_textured_CCBM("Lamberton")
+
+# Suppress x-axis text/ticks on top two subplots (St. Paul & Waseca)
+Y2_CCBM_plot_StPaul <- Y2_CCBM_plot_StPaul + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+Y2_CCBM_plot_Waseca <- Y2_CCBM_plot_Waseca + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+# Stack plots into patchwork
+Y2_CCBM_composite_figure <- (Y2_CCBM_plot_StPaul / Y2_CCBM_plot_Waseca / Y2_CCBM_plot_Lamberton) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    tag_levels = "a", 
+    tag_prefix = "(", 
+    tag_suffix = ")"
+  ) &
+  theme(
+    legend.position = "bottom",
+    legend.box.margin = margin(t = 5, r = 30, b = 5, l = 0), # Adds right-side padding to prevent clipping
+    legend.justification = "center",
+    plot.tag = element_text(face = "bold", size = 11, family = "serif"),
+    plot.title = element_text(face = "bold", size = 13, family = "serif"),
+    plot.caption = element_text(face = "bold", size = 11, family = "serif", hjust = 0.5, margin = margin(t = 5, b = 5))
+  )
+
+# ==============================================================================
+# 3. DIRECT DISK EXPORT
+# ==============================================================================
+ggsave(
+  filename = "Y2_Composite_CCBM_By_Site.png",
+  plot = Y2_CCBM_composite_figure,
+  width = 8.5,
+  height = 12,
+  dpi = 300,
+  device = "png"
+)
+
+
+
+
+
+
+
+
 
 #----F24 CN Ratio----
-
-
 
 view(F24_AGBM_CN)
 
@@ -843,7 +1467,7 @@ ggplot(F24_AGBM_CN, aes(x = Trt, y = CN_rat, fill = Treatment_Full)) +
 
 #----MODEL----
 
-F24_CC_CNrat_MOD = lmer(CN_rat ~ Treatment_Full + (1|Site),
+F24_CC_CNrat_MOD = lmer(CN_rat ~ Treatment_Full + (1|Site:Rep),
                     data = F24_AGBM_CN)
 
 #----CHECKING MODEL----
@@ -867,8 +1491,8 @@ par(mfrow = c(1, 1))
 
 #----TRANSFORMING THE MODEL----
 # 1. Fit the log-transformed model (using the cleaned data)
-F24_CC_CNrat_logMOD <- lmer(
-  log(CN_rat) ~ Treatment_Full + (1|Site),
+F24_CC_CNrat_logMOD <- lm(
+  log(CN_rat) ~ Treatment_Full * Site,
   data = F24_AGBM_CN)
 
 # 2. Run diagnostics on the log-transformed model to verify correction
@@ -902,6 +1526,22 @@ F24_CC_CNrat_ANOVA  <- anova(F24_CC_CNrat_logMOD, type = 3, ddf = "Satterthwaite
 print(F24_CC_CNrat_ANOVA)
 
 
+
+F24_CC_CNrat_ANOVA %>%
+  tidy() %>%
+  select(
+    Source = term,
+    `Sum Sq` = sumsq,
+    Df = df,
+    `F value` = statistic,
+    `Pr(>F)` = p.value
+  ) %>%
+  mutate(`Pr(>F)` = format(`Pr(>F)`, scientific = FALSE, digits = 4)) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
 #----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
 
 # ==============================================================================
@@ -910,7 +1550,7 @@ print(F24_CC_CNrat_ANOVA)
 # First, estimate marginal means on the log scale
 F24_CC_CNrat_emm_log <- emmeans(
   F24_CC_CNrat_logMOD, 
-  ~ Treatment_Full)
+  ~ Treatment_Full | Site)
 
 F24_CC_CNrat_emm_log %>% 
   summary(infer = TRUE, type = "response")
@@ -935,16 +1575,23 @@ F24_CC_CNrat_plot_data <- regrid(F24_CC_CNrat_emm_log, transform = "response") %
   as.data.frame() %>%
   left_join(
     as.data.frame(F24_CC_CNrat_cld) %>% 
-      select(Treatment_Full, .group), 
-    by = c("Treatment_Full")
+      select(Treatment_Full, Site, .group), 
+    by = c("Treatment_Full", "Site")
   ) %>%
   mutate(Letter = trimws(.group))
 
 
 
+F24_CC_CNrat_plot_data
 
 
 
+F24_CC_CNrat_plot_data %>%
+  select(Site, Treatment_Full, response, SE, Letter) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
 #----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
 
 
@@ -1058,7 +1705,7 @@ ggplot(S25_AGBM_CN_novolunteer, aes(x = Trt, y = CN_rat, fill = Treatment_Full))
 
 #----MODEL----
 
-S25_CC_CNrat_MOD = lmer(CN_rat ~ Treatment_Full * Site + (1|Site:Rep),
+S25_CC_CNrat_MOD = lmer(CN_rat ~ Treatment_Full + (1|Site:Rep),
                         data = S25_AGBM_CN_novolunteer)
 
 #----CHECKING MODEL----
@@ -1082,22 +1729,60 @@ par(mfrow = c(1, 1))
 
 
 
+
+S25_CC_CNrat_logMOD = lm(log(CN_rat) ~ Treatment_Full * Site,
+                        data = S25_AGBM_CN_novolunteer)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(S25_CC_CNrat_logMOD), residuals(S25_CC_CNrat_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(S25_CC_CNrat_logMOD), main = "Normal Q-Q Plot")
+qqline(residuals(S25_CC_CNrat_logMOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+
+
 #----MODEL SUMMARY AND ANOVA----
 # 1. Generate the standard model parameter summary
-summary(S25_CC_CNrat_MOD)
+summary(S25_CC_CNrat_logMOD)
 
 #----EXPONENTIATE FOR TRANSFORMED MODELS
 
-exp(fixef(S25_CC_CNrat_MOD))
+exp(fixef(S25_CC_CNrat_logMOD))
 
 #----ANOVA for lm models----
 
-S25_CC_CNrat_ANOVA <- car::Anova(S25_CC_CNrat_ANOVA, type = "III")
+S25_CC_CNrat_ANOVA <- car::Anova(S25_CC_CNrat_logMOD , type = "III")
 S25_CC_CNrat_ANOVA
 
-S25_CC_CNrat_ANOVA  <- anova(S25_CC_CNrat_MOD, type = 3, ddf = "Satterthwaite")
+S25_CC_CNrat_ANOVA  <- anova(S25_CC_CNrat_logMOD, type = 3, ddf = "Satterthwaite")
 print(S25_CC_CNrat_ANOVA)
 
+
+S25_CC_CNrat_ANOVA %>%
+  tidy() %>%
+  select(
+    Source = term,
+    `Sum Sq` = sumsq,
+    Df = df,
+    `F value` = statistic,
+    `Pr(>F)` = p.value
+  ) %>%
+  mutate(`Pr(>F)` = format(`Pr(>F)`, scientific = FALSE, digits = 4)) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
 #----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
 
 # ==============================================================================
@@ -1105,8 +1790,8 @@ print(S25_CC_CNrat_ANOVA)
 # ==============================================================================
 # First, estimate marginal means on the log scale
 S25_CC_CNrat_emm <- emmeans(
-  S25_CC_CNrat_MOD, 
-  ~ Treatment_Full| Site)
+  S25_CC_CNrat_logMOD, 
+  ~ Treatment_Full | Site)
 
 S25_CC_CNrat_emm %>% 
   summary(infer = TRUE)
@@ -1128,15 +1813,20 @@ S25_CC_CNrat_plot_data <- regrid(S25_CC_CNrat_emm, transform = "response") %>%
   as.data.frame() %>%
   left_join(
     as.data.frame(S25_CC_CNrat_cld) %>% 
-      select(Treatment_Full, .group), 
-    by = c("Treatment_Full")
+      select(Treatment_Full, Site, .group), 
+    by = c("Treatment_Full", "Site")
   ) %>%
   mutate(Letter = trimws(.group))
 
 
+S25_CC_CNrat_plot_data
 
-
-
+S25_CC_CNrat_plot_data %>%
+  select(Site, Treatment_Full, response, SE, Letter) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
 
 #----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
 
@@ -1160,7 +1850,7 @@ S25_CC_CNrat_plot_data <- S25_CC_CNrat_plot_data %>%
     X_Midpoint = (n_distinct(Treatment_Full) + 1) / 2,
     
     # Find the maximum height in this cluster to float the "n.s." label safely
-    Cluster_Max_Y = max(emmean+ SE)
+    Cluster_Max_Y = max(response + SE)
   ) %>%
   ungroup()
 
@@ -1170,18 +1860,18 @@ S25_CC_CNrat_plot_data <- S25_CC_CNrat_plot_data %>%
 
   S25_CC_CNrat_plot_data %>%
 
-    ggplot(aes(x = Treatment_Full, y = emmean, fill = Treatment_Full)) +
+    ggplot(aes(x = Treatment_Full, y = response, fill = Treatment_Full)) +
     # Clustered Bars and Error Bars
     geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
     geom_errorbar(
-      aes(ymin = pmax(0, emmean - SE), ymax = emmean + SE),
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
       position = position_dodge(width = 0.8),
       width = 0.2
     ) +
     
     # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
     geom_text(
-      aes(label = Bar_Letter, y = emmean + SE),
+      aes(label = Bar_Letter, y = response + SE),
       position = position_dodge(width = 0.8),
       vjust = -0.5,
       size = 5,
@@ -1202,14 +1892,8 @@ S25_CC_CNrat_plot_data <- S25_CC_CNrat_plot_data %>%
     scale_fill_manual(values = color_map) +
     scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
     labs(
-      title = paste("Spring 2025 Cover Crop Shoot Biomass C:N Ratio"),
       y = expression("Estimated Mean CC C:N Ratio"),
       x = "Treatment",
-      caption = paste0(
-        "Bars represent estimated marginal mean CC shoot biomass C:N ratio.\n",
-        "Error bars represent ±1 SE.\n",
-        "Letters indicate significant differences within each site (Tukey HSD, alpha = 0.05)."
-      ),
       fill = "Cover Crop Treatment"
     ) +
     theme_bw(base_family = "serif") +
@@ -1218,6 +1902,371 @@ S25_CC_CNrat_plot_data <- S25_CC_CNrat_plot_data %>%
       axis.text.x = element_text(angle = 45, hjust = 1, size = 10, face = "bold"),
       strip.text = element_text(face = "bold", size = 10)
     )
+
+
+
+
+
+
+
+#----Y2 CN rat models----
+
+#----F25 C:N Ratio----
+
+
+#----MODEL----
+
+F25_CC_CNrat_MOD = lmer(CN_rat ~ Treatment_Full * Site + (1|Site:Rep),
+                        data = F25_AGBM_CN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(F25_CC_CNrat_MOD), residuals(F25_CC_CNrat_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(F25_CC_CNrat_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(F25_CC_CNrat_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+
+
+#----TRANSFORMING THE MODEL----
+# 1. Fit the log-transformed model (using the cleaned data)
+F25_CC_CNrat_logMOD <- lmer(
+  log(CN_rat) ~ Treatment_Full * Site + (1|Site:Rep),
+  data = F25_AGBM_CN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(F25_CC_CNrat_logMOD), residuals(F25_CC_CNrat_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(F25_CC_CNrat_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(F25_CC_CNrat_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(F25_CC_CNrat_logMOD)
+
+#----EXPONENTIATE FOR TRANSFORMED MODELS
+
+exp(fixef(F25_CC_CNrat_logMOD))
+
+
+
+
+F25_CC_CNrat_ANOVA  <- anova(F25_CC_CNrat_logMOD, type = 3, ddf = "Satterthwaite")
+print(F25_CC_CNrat_ANOVA)
+
+F25_CC_CNrat_ANOVA  %>%
+  tidy() %>%
+  select(
+    Source = term,
+    `Sum Sq` = sumsq,
+    `Mean Sq` = meansq,
+    NumDF = NumDF,
+    DenDF = DenDF,
+    `F value` = statistic,
+    `Pr(>F)` = p.value
+  ) %>%
+  mutate(`Pr(>F)` = format(`Pr(>F)`, scientific = FALSE, digits = 4)) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+F25_CC_CNrat_emm_log <- emmeans(
+  F25_CC_CNrat_logMOD, 
+  ~ Treatment_Full| Site)
+
+F25_CC_CNrat_emm_log %>% 
+  summary(infer = TRUE, type = "response")
+
+F25_CC_CNrat_emm_log %>% 
+  summary(infer = TRUE)
+
+F25_CC_CNrat_contrasts <- pairs(F25_CC_CNrat_emm_log, adjust = "tukey")
+print(F25_CC_CNrat_contrasts)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+F25_CC_CNrat_cld <- cld(
+  F25_CC_CNrat_emm_log, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+F25_CC_CNrat_plot_data <- regrid(F25_CC_CNrat_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F25_CC_CNrat_cld) %>% 
+      select(Treatment_Full, Site, .group), 
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+
+
+F25_CC_CNrat_plot_data
+
+F25_CC_CNrat_plot_data %>%
+  select(Site, Treatment_Full, response, SE, Letter) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+
+
+
+
+#----S26 CC C:N Ratio----
+
+
+#----CC AGBM EXPLORATORY BOXPLOT----
+
+ggplot(S26_AGBM_CN, aes(x = Trt, y = CN_rat, fill = Treatment_Full)) +
+  geom_boxplot() +
+  facet_wrap(~ Site) +
+  scale_fill_manual(values = color_map) + 
+  theme_bw(base_family = "serif") +
+  labs(
+    x = "Cover Crop Treatment",
+    y = expression(CC~Shoot~Biomass~C:N~Ratio),
+    fill = "CC Type"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(face = "bold"))
+
+
+#----MODEL----
+
+S26_CC_CNrat_MOD = lmer(CN_rat ~ Treatment_Full * Site + (1|Site:Rep),
+                        data = S26_AGBM_CN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(S26_CC_CNrat_MOD), residuals(S26_CC_CNrat_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(S26_CC_CNrat_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(S26_CC_CNrat_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+
+
+
+
+
+S26_CC_CNrat_logMOD = lmer(log(CN_rat) ~ Treatment_Full * Site + (1|Site:Rep),
+                           data = S26_AGBM_CN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(S26_CC_CNrat_logMOD), residuals(S26_CC_CNrat_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(S26_CC_CNrat_logMOD), main = "Normal Q-Q Plot")
+qqline(residuals(S26_CC_CNrat_logMOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(S26_CC_CNrat_logMOD)
+
+#----EXPONENTIATE FOR TRANSFORMED MODELS
+
+exp(fixef(S26_CC_CNrat_logMOD))
+
+#----ANOVA for lm models----
+
+
+
+S26_CC_CNrat_ANOVA  <- anova(S26_CC_CNrat_logMOD, type = 3, ddf = "Satterthwaite")
+print(S26_CC_CNrat_ANOVA)
+
+
+
+
+
+S26_CC_CNrat_ANOVA %>%
+  tidy() %>%
+  select(
+    Source = term,
+    `Sum Sq` = sumsq,
+    `Mean Sq` = meansq,
+    NumDF = NumDF,
+    DenDF = DenDF,
+    `F value` = statistic,
+    `Pr(>F)` = p.value
+  ) %>%
+  mutate(`Pr(>F)` = format(`Pr(>F)`, scientific = FALSE, digits = 4)) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+S26_CC_CNrat_emm <- emmeans(
+  S26_CC_CNrat_logMOD, 
+  ~ Treatment_Full| Site)
+
+S26_CC_CNrat_emm %>% 
+  summary(infer = TRUE)
+
+S26_CC_CNrat_contrasts <- pairs(S26_CC_CNrat_emm, adjust = "tukey")
+print(S25_CC_CNrat_contrasts)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+S26_CC_CNrat_cld <- cld(
+  S26_CC_CNrat_emm, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+S26_CC_CNrat_cld 
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+S26_CC_CNrat_plot_data <- regrid(S26_CC_CNrat_emm, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(S26_CC_CNrat_cld) %>% 
+      select(Treatment_Full, Site, .group), 
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+
+S26_CC_CNrat_plot_data
+
+S26_CC_CNrat_plot_data %>%
+  select(Site, Treatment_Full, response, SE, Letter) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+
+
+#----F25 and S26 N uptake----
+
+
+F25_Nuptake_mod <- lmer(log(N_kgha) ~ Treatment_Full * Site + (1|Site:Rep), data = F25_AGBM_CN)
+
+# ANOVA summary
+anova(F25_Nuptake_mod, type = 3, ddf = "Satterthwaite")
+
+# Extract Estimated Marginal Means partitioned by Site
+F25_Nuptake_emm <- emmeans(F25_Nuptake_mod , ~ Treatment_Full | Site)
+
+# Generate Compact Letter Display
+F25_Nuptake_cld <- cld(
+  F25_Nuptake_emm, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE
+)
+
+F25_Nuptake_cld
+
+F25_Nuptake_plot_data <- regrid(F25_Nuptake_emm, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F25_Nuptake_cld) %>% 
+      select(Treatment_Full, Site, .group), 
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+
+F25_Nuptake_plot_data
+
+
+
+
+
+
+
+
+S26_Nuptake_mod <- lmer(log(N_kgha) ~ Treatment_Full * Site + (1|Site:Rep), data = S26_AGBM_CN)
+
+
+
+# ANOVA summary
+anova(S26_Nuptake_mod, type = 3, ddf = "Satterthwaite")
+
+# Extract Estimated Marginal Means partitioned by Site
+S26_Nuptake_emm <- emmeans(S26_Nuptake_mod , ~ Treatment_Full | Site)
+
+# Generate Compact Letter Display
+S26_Nuptake_cld <- cld(
+  S26_Nuptake_emm, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE
+)
+
+S26_Nuptake_cld
+
+S26_Nuptake_plot_data <- regrid(S26_Nuptake_emm, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(S26_Nuptake_cld) %>% 
+      select(Treatment_Full, Site, .group), 
+    by = c("Treatment_Full", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+
+S26_Nuptake_plot_data
 
 
 

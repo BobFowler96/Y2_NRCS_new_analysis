@@ -352,7 +352,7 @@ ggplot(S25_SoiNXAGBM_dat, aes(x = Treatment_Full, y = Total_N_lbac_S25, fill = T
 
 # Filter out Lamberton and generate scatterplot with overall trendline
 ggplot(data = S25_SoiNXAGBM_dat %>% filter(Site != "Lamberton"), 
-       aes(x = BMN_kgha_S25, y = CN_rat_S25 )) +
+       aes(x = CN_rat_S25 , y = BMN_kgha_S25 )) +
   # Map point color to Treatment_Full
   geom_point(aes(color = Treatment_Full), size = 2.5, alpha = 0.8) +
   # Keep trendline global across all points
@@ -361,8 +361,8 @@ ggplot(data = S25_SoiNXAGBM_dat %>% filter(Site != "Lamberton"),
   scale_color_manual(values = color_map) +
   labs(
     title = "S25 biomass C:N by S25 BMN",
-    x = expression("Biomass N Uptake (lb ac"^{-1}*")"),
-    y = "Cover Crop Shoot C:N Ratio",
+    x = "Cover Crop C:N Ratio" ,
+    y = expression("Biomass N Uptake (kg ha"^{-1}*")"),
     color = "Treatment"
   ) +
   theme_bw(base_family = "serif") +
@@ -374,6 +374,30 @@ ggplot(data = S25_SoiNXAGBM_dat %>% filter(Site != "Lamberton"),
     legend.position = "right"
   )
 
+
+S25_SoiNXAGBM_dat %>%
+  filter(Site != "Lamberton") %>%
+  ggplot(aes(x = CN_rat_S25, y = BMN_kgha_S25, color = Treatment_Full, fill = Treatment_Full)) +
+  # Points mapped to Treatment_Full (inherited globally)
+  geom_point(size = 2.5, alpha = 0.8) +
+  # Separate linear regressions per treatment level (inherits color and fill)
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8, alpha = 0.15) +
+  # Apply custom color map to line/point colors and confidence band fills
+  scale_color_manual(values = color_map, name = "Treatment") +
+  scale_fill_manual(values = color_map, name = "Treatment") +
+  labs(
+    title = "S25 Biomass C:N Ratio vs. Biomass N Uptake",
+    x = "Cover Crop C:N Ratio",
+    y = expression("Biomass N Uptake (kg ha"^-1*")")
+  ) +
+  theme_bw(base_family = "serif") +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 10, color = "black"),
+    axis.title = element_text(size = 11, face = "bold"),
+    legend.title = element_text(face = "bold", size = 10),
+    legend.position = "right"
+  )
 
 
 

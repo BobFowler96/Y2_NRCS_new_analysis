@@ -23,6 +23,8 @@ library("googlesheets4")
 library("tibble")
 library("webshot2")
 library("magick")
+library("patchwork")
+library("broom")
 
 
 
@@ -1657,63 +1659,61 @@ S25_SoilNit_plot_data <- S25_SoilNit_plot_data %>%
   ) %>%
   ungroup()
 
-# ==============================================================================
-# 2. Simplified Plotting Function (No complex positioning for n.s.)
-# ==============================================================================
+
+
+
 S25_plot_site_SoilNit<- function(site_name) {
   S25_SoilNit_plot_data %>%
     filter(Site == site_name) %>%
-    
-    ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
-    # Clustered Bars and Error Bars
-    geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
-    geom_errorbar(
-      aes(ymin = pmax(0, response - SE), ymax = response + SE),
-      position = position_dodge(width = 0.8),
-      width = 0.2
-    ) +
-    
-    # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
-    geom_text(
-      aes(label = Bar_Letter, y = response + SE),
-      position = position_dodge(width = 0.8),
-      vjust = -0.5,
-      size = 3.2,
-      fontface = "bold"
-    ) +
-    
-    # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
-    geom_text(
-      aes(label = Cluster_NS, y = Cluster_Max_Y),
-      vjust = -0.8,
-      size = 3.5,
-      fontface = "bold"
-    ) +
-    
-    # Aesthetics & Theme
-    scale_fill_manual(values = color_map) +
-    scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
-    labs(
-      title = paste("Spring 2025 Soil Nitrate/Nitrite-N Profile:", site_name),
-      y = expression(Estimated~Marginal~Mean~Soil~NO[3]^-{}/NO[2]^-{}~(kg~ha^-1)),
-      x = "Soil Depth Horizon",
-      caption = paste0(
-        "Bars represent back-transformed emmeans.\n",
-        "Error bars represent Delta-method approximated ±1 SE.\n",
-        "Letters indicate significant differences within each site and depth combination (Tukey HSD, alpha = 0.05)."
-      ),
-      fill = "Cover Crop Treatment"
-    ) +
-    theme_bw(base_family = "serif") +
-    theme(
-      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
-      legend.position = "bottom",
-      legend.title = element_text(face = "bold", size = 9),
-      legend.text = element_text(size = 8),
-      axis.text = element_text(color = "black", size = 9),
-      panel.grid.major.x = element_blank()
-    ) +
-    guides(fill = guide_legend(ncol = 3))
+  
+  ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
+  # Clustered Bars and Error Bars
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
+  geom_errorbar(
+    aes(ymin = pmax(0, response - SE), ymax = response + SE),
+    position = position_dodge(width = 0.8),
+    width = 0.2
+  ) +
+  
+  # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
+  geom_text(
+    aes(label = Bar_Letter, y = response + SE),
+    position = position_dodge(width = 0.8),
+    vjust = -0.5,
+    size = 3.2,
+    fontface = "bold"
+  ) +
+  
+  # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
+  geom_text(
+    aes(label = Cluster_NS, y = Cluster_Max_Y),
+    vjust = -0.8,
+    size = 3.5,
+    fontface = "bold"
+  ) +
+  
+  # Aesthetics & Theme
+  scale_fill_manual(values = color_map) +
+  scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
+  labs(
+    subtitle = paste(site_name),
+    y = expression(bold("Estimated Mean Soil NO")[bold("3")]^bold("-")*bold
+                   ("/NO")[bold("2")]^bold("-")~bold("(kg ha")^bold("-1")*bold(")")),
+    x = NULL,
+    fill = "Cover Crop Treatment"
+  ) +
+  theme_bw(base_family = "serif") +
+  theme(
+    axis.text.x = element_text(color = "black", size = 14, face = "bold"),
+    axis.text.y = element_text(color = "black", size = 12),
+    axis.title.y = element_text(size = 12, color = "black", face = "bold"),
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.spacing.y = unit(0.2, "cm"),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold", size = 10),
+    plot.subtitle = element_text(face = "bold", size = 11)
+  )
 }
 
 # ==============================================================================
@@ -1727,6 +1727,53 @@ S25_SoilNit_plot_Lamberton <- S25_plot_site_SoilNit("Lamberton")
 S25_SoilNit_plot_StPaul  
 S25_SoilNit_plot_Waseca  
 S25_SoilNit_plot_Lamberton
+
+
+
+
+# Suppress x-axis text/ticks on top two subplots (St. Paul & Waseca)
+S25_SoilNit_plot_StPaul <- S25_SoilNit_plot_StPaul + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+S25_SoilNit_plot_Waseca   <- S25_SoilNit_plot_Waseca   + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+S25_SoilNit_plot_Lamberton <- S25_SoilNit_plot_Lamberton +
+  labs(x = "Depth (cm)") +
+  theme(
+    axis.title.x = element_text(face = "bold", size = 12, margin = margin(t = 8, b = 5))
+  )
+
+# 2. Assemble stacked patchwork without using plot_annotation caption
+S25_SoilNit_composite_figure <- (S25_SoilNit_plot_StPaul / S25_SoilNit_plot_Waseca / S25_SoilNit_plot_Lamberton) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    tag_levels = "a", 
+    tag_prefix = "(", 
+    tag_suffix = ")"
+  ) &
+  theme(
+    legend.position = "bottom",
+    legend.box.margin = margin(t = 5, r = 30, b = 5, l = 0),
+    legend.justification = "center",
+    plot.tag = element_text(face = "bold", size = 11, family = "serif"),
+    plot.title = element_text(face = "bold", size = 13, family = "serif")
+  )
+
+# 3. Direct Disk Export
+ggsave(
+  filename = "S25_Composite_SoilNit.png",
+  plot = S25_SoilNit_composite_figure,
+  width = 8.5,
+  height = 12,
+  dpi = 300,
+  device = "png"
+)
+
+
+
+
+
 
 
 
@@ -2190,14 +2237,304 @@ S25_plot_site_deptotN<- function(site_name) {
     scale_fill_manual(values = color_map) +
     scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
     labs(
-      title = paste("Spring 2025 Soil Total Inorganic N Profile:", site_name),
-      y = expression(Estimated~Marginal~Mean~Total~Inorganic~N~(kg~ha^-1)),
+      subtitle = paste(site_name),
+      y = expression(bold("Estimated Mean Soil Inorganic N (kg ha")^bold("-1")*bold(")")),
+      x = NULL,
+      fill = "Cover Crop Treatment"
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      axis.text.x = element_text(color = "black", size = 14, face = "bold"),
+      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.y = element_text(size = 12, color = "black", face = "bold"),
+      legend.position = "bottom",
+      legend.box = "vertical",
+      legend.spacing.y = unit(0.2, "cm"),
+      legend.text = element_text(size = 9),
+      legend.title = element_text(face = "bold", size = 10),
+      plot.subtitle = element_text(face = "bold", size = 11)
+    )
+}
+
+# ==============================================================================
+# 3. Regenerate the Standalone Objects
+# ==============================================================================
+S25_deptotN_plot_StPaul    <- S25_plot_site_deptotN("Saint Paul")
+S25_deptotN_plot_Waseca    <- S25_plot_site_deptotN("Waseca")
+S25_deptotN_plot_Lamberton <- S25_plot_site_deptotN("Lamberton")
+
+# View a plot in RStudio
+S25_deptotN_plot_StPaul  
+S25_deptotN_plot_Waseca  
+S25_deptotN_plot_Lamberton
+
+
+
+
+# Suppress x-axis text/ticks on top two subplots (St. Paul & Waseca)
+S25_deptotN_plot_StPaul <- S25_deptotN_plot_StPaul + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+S25_deptotN_plot_Waseca   <- S25_deptotN_plot_Waseca   + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+# Stack plots into patchwork
+S25_deptotN_composite_figure <- (S25_deptotN_plot_StPaul  / S25_deptotN_plot_Waseca / S25_deptotN_plot_Lamberton) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    tag_levels = "a", 
+    tag_prefix = "(", 
+    tag_suffix = ")"
+  ) &
+  theme(
+    legend.position = "bottom",
+    legend.box.margin = margin(t = 5, r = 30, b = 5, l = 0), # Adds right-side padding to prevent clipping
+    legend.justification = "center",
+    plot.tag = element_text(face = "bold", size = 11, family = "serif"),
+    plot.title = element_text(face = "bold", size = 13, family = "serif"),
+    plot.caption = element_text(face = "bold", size = 11, family = "serif", hjust = 0.5, margin = margin(t = 5, b = 5))
+  )
+
+# ==============================================================================
+# 3. DIRECT DISK EXPORT
+# ==============================================================================
+ggsave(
+  filename = "S25_Composite_totindepthN.png",
+  plot = S25_deptotN_composite_figure,
+  width = 8.5,
+  height = 12,
+  dpi = 300,
+  device = "png"
+)
+
+
+
+
+
+
+
+
+
+#----F25 Total within-depth N by Site----
+
+#----Process is streamlined, removed alot of the frills and exportable table code for speed----
+
+#----EXPLORING THE DATA----
+# ==============================================================================
+# 1. Generate Descriptive Statistics Dataframe
+# ==============================================================================
+F25_depthN_summary <- F25_3depth_soilN %>%
+  group_by(Site, Depth_cm, Treatment_Full) %>%
+  summarize(
+    n    = sum(!is.na(N_totindep_kgha)),
+    mean = mean(N_totindep_kgha, na.rm = TRUE),
+    sd   = sd(N_totindep_kgha, na.rm = TRUE),
+    # Standard Error of the Mean: SE = SD / sqrt(n)
+    se   = sd / sqrt(n),
+    # Coefficient of Variation: CV% = (SD / Mean) * 100
+    cv   = (sd / mean) * 100,
+    .groups = "drop" )
+print(F25_depthN_summary, n = 81)
+
+#----SOIL total in-depth N EXPLORATORY BOXPLOT----
+# ==============================================================================
+# Refined Soil N Boxplot (Linear Scale, High-Contrast Facets)
+# ==============================================================================
+ggplot(F25_3depth_soilN, aes(x = Treatment_Full, y = N_totindep_kgha, fill = Treatment_Full)) +
+  # Boxplot layer with clean lines and no underlying raw data points
+  geom_boxplot(outlier.shape = 16, outlier.size = 1.5, alpha = 0.85, color = "black") +
+  
+  # Facet grid: Depth vertically (metric), Site horizontally
+  facet_grid(Depth_cm ~ Site, scales = "free_y") +
+  
+  # Custom treatment color mapping
+  scale_fill_manual(values = color_map) +
+  
+  # Y-axis label using corrected R mathematical expression syntax
+  labs(
+    x = "Cover Crop Treatment",
+    y = expression(Total~Inorganic~N~(kg~ha^-1))
+  ) +
+  
+  # Set serif font family globally
+  theme_bw(base_family = "serif") +
+  
+  # Visual adjustments for facet banners and labels
+  theme(
+    legend.position = "none",
+    
+    # Rotate and align long treatment names on the horizontal axis
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9, color = "black"),
+    axis.text.y = element_text(size = 9, color = "black"),
+    axis.title  = element_text(face = "bold", size = 11, color = "black"),
+    
+    # Facet strips: Light grey background with a crisp, solid black border
+    strip.background = element_rect(fill = "grey90", color = "black", linewidth = 0.7),
+    strip.text       = element_text(face = "bold", size = 10, color = "black"),
+    
+    # Clean up background grid lines
+    panel.grid.major = element_line(color = "grey95"),
+    panel.grid.minor = element_blank()
+  )
+
+
+#----MODEL----
+
+F25_deptotN_MOD = lmer(N_totindep_kgha ~ Trt * Depth_cm * Site + (1|Site:Rep),
+                       data = F25_3depth_soilN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(F25_deptotN_MOD), residuals(F25_deptotN_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(F25_deptotN_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(F25_deptotN_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+#----TRANSFORMING THE MODEL----
+# 1. Fit the log-transformed model (using the cleaned data)
+F25_deptotN_logMOD <- lmer(
+  log(N_totindep_kgha) ~ Treatment_Full * Depth_cm * Site + (1|Site:Rep),
+  data = F25_3depth_soilN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(F25_deptotN_logMOD), residuals(F25_deptotN_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(F25_deptotN_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(F25_deptotN_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----VARIANCE COMPONENTS----
+# Extract and calculate the ICC
+vc <- as.data.frame(VarCorr(F25_deptotN_logMOD))
+sigma2_block <- vc$vcov[vc$grp == "Site:Rep"]
+sigma2_resid <- vc$vcov[vc$grp == "Residual"]
+
+icc <- sigma2_block / (sigma2_block + sigma2_resid)
+cat("Blocking accounted for", round(icc * 100, 1), "% of the total random variation.\n")
+
+performance::icc(F25_deptotN_logMOD)
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(F25_deptotN_logMOD)
+
+# 2. Run Type III ANOVA using Satterthwaite ddf
+F25_deptotN_logANOVA <- anova(F25_deptotN_logMOD, type = 3, ddf = "Satterthwaite")
+print(F25_deptotN_logANOVA)
+
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+F25_deptotN_emm_log <- emmeans(
+  F25_deptotN_logMOD, 
+  ~ Treatment_Full|Depth_cm * Site)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+F25_deptotN_cld <- cld(
+  F25_deptotN_emm_log, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+
+F25_deptotN_cld
+
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+F25_deptotN_plot_data <- regrid(F25_deptotN_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F25_deptotN_cld) %>% 
+      select(Treatment_Full, Depth_cm, Site, .group), 
+    by = c("Treatment_Full", "Depth_cm", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+print(F25_deptotN_plot_data)
+
+
+
+#----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
+
+
+
+# ==============================================================================
+# 1. Simplified Data Wrangling (No complex indexing or middle-bar math)
+# ==============================================================================
+F25_deptotN_plot_data <- F25_deptotN_plot_data %>%
+  group_by(Site, Depth_cm) %>%
+  mutate(
+    # Count unique letters in this site-depth cluster
+    Is_Sig = n_distinct(Letter) > 1,
+    
+    # Layer 1: Individual letters (blanked out if the group is non-significant)
+    Bar_Letter = if_else(Is_Sig, Letter, ""),
+    
+    # Layer 2: Single "n.s." label (placed only on the first row of a non-sig cluster)
+    Cluster_NS = if_else(!Is_Sig & row_number() == 1, "n.s.", ""),
+    
+    # Find the maximum height in this cluster to float the "n.s." label safely
+    Cluster_Max_Y = max(response + SE)
+  ) %>%
+  ungroup()
+
+# ==============================================================================
+# 2. Simplified Plotting Function (No complex positioning for n.s.)
+# ==============================================================================
+F25_plot_site_deptotN<- function(site_name) {
+  F25_deptotN_plot_data %>%
+    filter(Site == site_name) %>%
+    
+    ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
+    # Clustered Bars and Error Bars
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.2
+    ) +
+    
+    # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
+    geom_text(
+      aes(label = Bar_Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.2,
+      fontface = "bold"
+    ) +
+    
+    # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
+    geom_text(
+      aes(label = Cluster_NS, y = Cluster_Max_Y),
+      vjust = -0.8,
+      size = 3.5,
+      fontface = "bold"
+    ) +
+    
+    # Aesthetics & Theme
+    scale_fill_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
+    labs(
+      y = expression("Estimated Mean Soil Inorganic N (kg ha"^{-1}*")"),
       x = "Soil Depth Horizon",
-      caption = paste0(
-        "Bars represent back-transformed emmeans.\n",
-        "Error bars represent Delta-method approximated ±1 SE.\n",
-        "Letters indicate significant differences within each site and depth combination (Tukey HSD, alpha = 0.05)."
-      ),
       fill = "Cover Crop Treatment"
     ) +
     theme_bw(base_family = "serif") +
@@ -2215,11 +2552,1018 @@ S25_plot_site_deptotN<- function(site_name) {
 # ==============================================================================
 # 3. Regenerate the Standalone Objects
 # ==============================================================================
-S25_deptotN_plot_StPaul    <- S25_plot_site_deptotN("Saint Paul")
-S25_deptotN_plot_Waseca    <- S25_plot_site_deptotN("Waseca")
-S25_deptotN_plot_Lamberton <- S25_plot_site_deptotN("Lamberton")
+F25_deptotN_plot_StPaul    <- F25_plot_site_deptotN("Saint Paul")
+F25_deptotN_plot_Waseca    <- F25_plot_site_deptotN("Waseca")
+F25_deptotN_plot_Lamberton <- F25_plot_site_deptotN("Lamberton")
 
 # View a plot in RStudio
-S25_deptotN_plot_StPaul  
-S25_deptotN_plot_Waseca  
-S25_deptotN_plot_Lamberton
+F25_deptotN_plot_StPaul  
+F25_deptotN_plot_Waseca  
+F25_deptotN_plot_Lamberton
+
+
+
+
+
+
+
+
+#----F25 soil ammonium----
+
+
+
+
+
+#----MODEL----
+
+F25_amm_MOD = lm(AmmoniumN_kgha ~ Treatment_Full * Depth_cm * Site,
+                   data = F25_3depth_soilN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(F25_amm_MOD), residuals(F25_amm_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(F25_amm_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(F25_amm_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+#----TRANSFORMING THE MODEL----
+# 1. Fit the log-transformed model (using the cleaned data)
+F25_amm_logMOD <- lmer(
+  log(AmmoniumN_kgha) ~ Treatment_Full * Depth_cm * Site + (1|Site:Rep),
+  data = F25_3depth_soilN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(F25_amm_logMOD), residuals(F25_amm_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(F25_amm_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(F25_amm_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----VARIANCE COMPONENTS----
+# Extract and calculate the ICC
+vc <- as.data.frame(VarCorr(F25_amm_logMOD))
+sigma2_block <- vc$vcov[vc$grp == "Site:Rep"]
+sigma2_resid <- vc$vcov[vc$grp == "Residual"]
+
+icc <- sigma2_block / (sigma2_block + sigma2_resid)
+cat("Blocking accounted for", round(icc * 100, 1), "% of the total random variation.\n")
+
+performance::icc(F25_amm_logMOD)
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(F25_amm_logMOD)
+
+#----EXPONENTIATE FOR TRANSFORMED MODELS
+
+exp(fixef(F25_amm_logMOD))
+
+
+# 2. Run Type III ANOVA using Satterthwaite ddf
+F25_amm_logANOVA <- anova(F25_amm_logMOD, type = 3, ddf = "Satterthwaite")
+print(F25_amm_logANOVA)
+
+
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+F25_amm_emm_log <- emmeans(
+  F25_amm_logMOD, 
+  ~ Treatment_Full|Depth_cm * Site)
+
+F25_amm_emm_log %>% 
+  summary(infer = TRUE, type = "response")
+
+F25_amm_emm_log %>% 
+  summary(infer = TRUE)
+
+F25_SoilAmm_contrasts <- pairs(F25_amm_emm_log, adjust = "tukey")
+print(F24_SoilAmm_contrasts)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+F25_SoilAmm_cld <- cld(
+  F25_amm_emm_log, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+
+
+
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+F25_SoilAmm_plot_data <- regrid(F25_amm_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F25_SoilAmm_cld) %>% 
+      select(Treatment_Full, Depth_cm, Site, .group), 
+    by = c("Treatment_Full", "Depth_cm", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+print(F25_SoilAmm_plot_data)
+
+
+
+#----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
+
+
+
+# ==============================================================================
+# 1. Simplified Data Wrangling (No complex indexing or middle-bar math)
+# ==============================================================================
+F25_SoilAmm_plot_data <- F25_SoilAmm_plot_data %>%
+  group_by(Site, Depth_cm) %>%
+  mutate(
+    # Count unique letters in this site-depth cluster
+    Is_Sig = n_distinct(Letter) > 1,
+    
+    # Layer 1: Individual letters (blanked out if the group is non-significant)
+    Bar_Letter = if_else(Is_Sig, Letter, ""),
+    
+    # Layer 2: Single "n.s." label (placed only on the first row of a non-sig cluster)
+    Cluster_NS = if_else(!Is_Sig & row_number() == 1, "n.s.", ""),
+    
+    # Find the maximum height in this cluster to float the "n.s." label safely
+    Cluster_Max_Y = max(response + SE)
+  ) %>%
+  ungroup()
+
+# ==============================================================================
+# 2. Simplified Plotting Function (No complex positioning for n.s.)
+# ==============================================================================
+F25_plot_site_ammonium <- function(site_name) {
+  F25_SoilAmm_plot_data %>%
+    filter(Site == site_name) %>%
+    
+    ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
+    # Clustered Bars and Error Bars
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.2
+    ) +
+    
+    # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
+    geom_text(
+      aes(label = Bar_Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.2,
+      fontface = "bold"
+    ) +
+    
+    # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
+    geom_text(
+      aes(label = Cluster_NS, y = Cluster_Max_Y),
+      vjust = -0.8,
+      size = 3.5,
+      fontface = "bold"
+    ) +
+    
+    # Aesthetics & Theme
+    scale_fill_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
+    labs(
+      title = paste("Fall 2025 Soil Ammonium-N Profile:", site_name),
+      y = expression("Estimated Mean Soil Ammonium-N (kg ha"^{-1}*")"),
+      x = "Soil Depth Horizon",
+      fill = "Cover Crop Treatment"
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold", size = 9),
+      legend.text = element_text(size = 8),
+      axis.text = element_text(color = "black", size = 9),
+      panel.grid.major.x = element_blank()
+    ) +
+    guides(fill = guide_legend(ncol = 3))
+}
+
+# ==============================================================================
+# 3. Regenerate the Standalone Objects
+# ==============================================================================
+F25_ammonium_plot_StPaul    <- F25_plot_site_ammonium("Saint Paul")
+F25_ammonium_plot_Waseca    <- F25_plot_site_ammonium("Waseca")
+F25_ammonium_plot_Lamberton <- F25_plot_site_ammonium("Lamberton")
+
+# View a plot in RStudio
+F25_ammonium_plot_StPaul  
+F25_ammonium_plot_Waseca  
+F25_ammonium_plot_Lamberton
+
+
+
+
+
+
+
+#----F25 3-depth soil Nitrate/Nitrite-N----
+
+
+
+#----EXPLORING THE DATA----
+# ==============================================================================
+# 1. Generate Descriptive Statistics Dataframe
+# ==============================================================================
+F25_Nit_summary <- F25_3depth_soilN %>%
+  group_by(Site, Depth_cm, Treatment_Full) %>%
+  summarize(
+    n    = sum(!is.na(Nitrate_NitriteN_kgha)),
+    mean = mean(Nitrate_NitriteN_kgha, na.rm = TRUE),
+    sd   = sd(Nitrate_NitriteN_kgha, na.rm = TRUE),
+    # Standard Error of the Mean: SE = SD / sqrt(n)
+    se   = sd / sqrt(n),
+    # Coefficient of Variation: CV% = (SD / Mean) * 100
+    cv   = (sd / mean) * 100,
+    .groups = "drop" )
+print(F25_Nit_summary , n = 81)
+
+#----SOIL total in-depth N EXPLORATORY BOXPLOT----
+# ==============================================================================
+# Refined Soil N Boxplot (Linear Scale, High-Contrast Facets)
+# ==============================================================================
+ggplot(F25_3depth_soilN, aes(x = Treatment_Full, y = Nitrate_NitriteN_kgha, fill = Treatment_Full)) +
+  # Boxplot layer with clean lines and no underlying raw data points
+  geom_boxplot(outlier.shape = 16, outlier.size = 1.5, alpha = 0.85, color = "black") +
+  
+  # Facet grid: Depth vertically (metric), Site horizontally
+  facet_grid(Depth_cm ~ Site, scales = "free_y") +
+  
+  # Custom treatment color mapping
+  scale_fill_manual(values = color_map) +
+  
+  # Y-axis label using corrected R mathematical expression syntax
+  labs(
+    x = "Cover Crop Treatment",
+    y = expression(Nitrate/Nitrite-N~(kg~ha^-1))
+  ) +
+  
+  # Set serif font family globally
+  theme_bw(base_family = "serif") +
+  
+  # Visual adjustments for facet banners and labels
+  theme(
+    legend.position = "none",
+    
+    # Rotate and align long treatment names on the horizontal axis
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9, color = "black"),
+    axis.text.y = element_text(size = 9, color = "black"),
+    axis.title  = element_text(face = "bold", size = 11, color = "black"),
+    
+    # Facet strips: Light grey background with a crisp, solid black border
+    strip.background = element_rect(fill = "grey90", color = "black", linewidth = 0.7),
+    strip.text       = element_text(face = "bold", size = 10, color = "black"),
+    
+    # Clean up background grid lines
+    panel.grid.major = element_line(color = "grey95"),
+    panel.grid.minor = element_blank()
+  )
+
+
+#----MODEL----
+
+F25_SoilNit_MOD = lmer(Nitrate_NitriteN_kgha ~ Trt * Depth_cm * Site + (1|Site:Rep),
+                       data = F25_3depth_soilN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(F25_SoilNit_MOD), residuals(F25_SoilNit_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(F25_SoilNit_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(F25_SoilNit_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+#----TRANSFORMING THE MODEL----
+# 1. Fit the log-transformed model (using the cleaned data)
+F25_SoilNit_logMOD <- lmer(
+  log(Nitrate_NitriteN_kgha) ~ Treatment_Full * Depth_cm * Site + (1|Site:Rep),
+  data = F25_3depth_soilN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(F25_SoilNit_logMOD), residuals(F25_SoilNit_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(F25_SoilNit_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(F25_SoilNit_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----VARIANCE COMPONENTS----
+# Extract and calculate the ICC
+vc <- as.data.frame(VarCorr(F25_SoilNit_logMOD))
+sigma2_block <- vc$vcov[vc$grp == "Site:Rep"]
+sigma2_resid <- vc$vcov[vc$grp == "Residual"]
+
+icc <- sigma2_block / (sigma2_block + sigma2_resid)
+cat("Blocking accounted for", round(icc * 100, 1), "% of the total random variation.\n")
+
+performance::icc(S25_SoilNit_logMOD)
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(F25_SoilNit_logMOD)
+
+# 2. Run Type III ANOVA using Satterthwaite ddf
+F25_SoilNit_logANOVA <- anova(F25_SoilNit_logMOD, type = 3, ddf = "Satterthwaite")
+print(F25_SoilNit_logANOVA)
+
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+F25_SoilNit_emm_log <- emmeans(
+  F25_SoilNit_logMOD, 
+  ~ Treatment_Full|Depth_cm * Site)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+F25_SoilNit_cld <- cld(
+  F25_SoilNit_emm_log, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+
+
+
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+F25_SoilNit_plot_data <- regrid(F25_SoilNit_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(F25_SoilNit_cld) %>% 
+      select(Treatment_Full, Depth_cm, Site, .group), 
+    by = c("Treatment_Full", "Depth_cm", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+
+print(F25_SoilNit_plot_data, n = 81)
+
+
+
+#----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
+
+
+
+# ==============================================================================
+# 1. Simplified Data Wrangling (No complex indexing or middle-bar math)
+# ==============================================================================
+F25_SoilNit_plot_data <- F25_SoilNit_plot_data %>%
+  group_by(Site, Depth_cm) %>%
+  mutate(
+    # Count unique letters in this site-depth cluster
+    Is_Sig = n_distinct(Letter) > 1,
+    
+    # Layer 1: Individual letters (blanked out if the group is non-significant)
+    Bar_Letter = if_else(Is_Sig, Letter, ""),
+    
+    # Layer 2: Single "n.s." label (placed only on the first row of a non-sig cluster)
+    Cluster_NS = if_else(!Is_Sig & row_number() == 1, "n.s.", ""),
+    
+    # Find the maximum height in this cluster to float the "n.s." label safely
+    Cluster_Max_Y = max(response + SE)
+  ) %>%
+  ungroup()
+
+# ==============================================================================
+# 2. Simplified Plotting Function (No complex positioning for n.s.)
+# ==============================================================================
+F25_plot_site_SoilNit<- function(site_name) {
+  F25_SoilNit_plot_data %>%
+    filter(Site == site_name) %>%
+    
+    ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
+    # Clustered Bars and Error Bars
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.2
+    ) +
+    
+    # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
+    geom_text(
+      aes(label = Bar_Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.2,
+      fontface = "bold"
+    ) +
+    
+    # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
+    geom_text(
+      aes(label = Cluster_NS, y = Cluster_Max_Y),
+      vjust = -0.8,
+      size = 3.5,
+      fontface = "bold"
+    ) +
+    
+    # Aesthetics & Theme
+    scale_fill_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
+    labs(
+      y = expression(Estimated~Marginal~Mean~Soil~NO[3]^-{}/NO[2]^-{}~(kg~ha^-1)),
+      x = "Soil Depth Horizon",
+      fill = "Cover Crop Treatment"
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold", size = 9),
+      legend.text = element_text(size = 8),
+      axis.text = element_text(color = "black", size = 9),
+      panel.grid.major.x = element_blank()
+    ) +
+    guides(fill = guide_legend(ncol = 3))
+}
+
+# ==============================================================================
+# 3. Regenerate the Standalone Objects
+# ==============================================================================
+F25_SoilNit_plot_StPaul    <- F25_plot_site_SoilNit("Saint Paul")
+F25_SoilNit_plot_Waseca    <- F25_plot_site_SoilNit("Waseca")
+F25_SoilNit_plot_Lamberton <- F25_plot_site_SoilNit("Lamberton")
+
+# View a plot in RStudio
+F25_SoilNit_plot_StPaul  
+F25_SoilNit_plot_Waseca  
+F25_SoilNit_plot_Lamberton
+
+
+
+
+
+
+
+#----S26 3-depth total N----
+
+
+
+#----EXPLORING THE DATA----
+# ==============================================================================
+# 1. Generate Descriptive Statistics Dataframe
+# ==============================================================================
+S26_depthN_summary <- S26_3depth_soilN %>%
+  group_by(Site, Depth_cm, Treatment_Full) %>%
+  summarize(
+    n    = sum(!is.na(N_totindep_kgha)),
+    mean = mean(N_totindep_kgha, na.rm = TRUE),
+    sd   = sd(N_totindep_kgha, na.rm = TRUE),
+    # Standard Error of the Mean: SE = SD / sqrt(n)
+    se   = sd / sqrt(n),
+    # Coefficient of Variation: CV% = (SD / Mean) * 100
+    cv   = (sd / mean) * 100,
+    .groups = "drop" )
+print(S25_depthN_summary , n = 81)
+
+#----SOIL total in-depth N EXPLORATORY BOXPLOT----
+# ==============================================================================
+# Refined Soil N Boxplot (Linear Scale, High-Contrast Facets)
+# ==============================================================================
+ggplot(S26_3depth_soilN, aes(x = Treatment_Full, y = N_totindep_kgha, fill = Treatment_Full)) +
+  # Boxplot layer with clean lines and no underlying raw data points
+  geom_boxplot(outlier.shape = 16, outlier.size = 1.5, alpha = 0.85, color = "black") +
+  
+  # Facet grid: Depth vertically (metric), Site horizontally
+  facet_grid(Depth_cm ~ Site, scales = "free_y") +
+  
+  # Custom treatment color mapping
+  scale_fill_manual(values = color_map) +
+  
+  # Y-axis label using corrected R mathematical expression syntax
+  labs(
+    x = "Cover Crop Treatment",
+    y = expression(Total~Inorganic~N~(kg~ha^-1))
+  ) +
+  
+  # Set serif font family globally
+  theme_bw(base_family = "serif") +
+  
+  # Visual adjustments for facet banners and labels
+  theme(
+    legend.position = "none",
+    
+    # Rotate and align long treatment names on the horizontal axis
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9, color = "black"),
+    axis.text.y = element_text(size = 9, color = "black"),
+    axis.title  = element_text(face = "bold", size = 11, color = "black"),
+    
+    # Facet strips: Light grey background with a crisp, solid black border
+    strip.background = element_rect(fill = "grey90", color = "black", linewidth = 0.7),
+    strip.text       = element_text(face = "bold", size = 10, color = "black"),
+    
+    # Clean up background grid lines
+    panel.grid.major = element_line(color = "grey95"),
+    panel.grid.minor = element_blank()
+  )
+
+
+#----MODEL----
+
+S26_deptotN_MOD = lmer(N_totindep_kgha ~ Trt * Depth_cm * Site + (1|Site:Rep),
+                       data = S26_3depth_soilN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(S26_deptotN_MOD), residuals(S26_deptotN_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(S26_deptotN_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(S26_deptotN_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+#----TRANSFORMING THE MODEL----
+# 1. Fit the log-transformed model (using the cleaned data)
+S26_deptotN_logMOD <- lmer(
+  log(N_totindep_kgha) ~ Treatment_Full * Depth_cm * Site + (1|Site:Rep),
+  data = S26_3depth_soilN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(S26_deptotN_logMOD), residuals(S26_deptotN_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(S26_deptotN_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(S26_deptotN_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(S26_deptotN_logMOD)
+
+# 2. Run Type III ANOVA using Satterthwaite ddf
+S26_deptotN_logANOVA <- anova(S26_deptotN_logMOD, type = 3, ddf = "Satterthwaite")
+print(S26_deptotN_logANOVA )
+
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+S26_deptotN_emm_log <- emmeans(
+  S26_deptotN_logMOD, 
+  ~ Treatment_Full|Depth_cm * Site)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+S26_deptotN_cld <- cld(
+  S26_deptotN_emm_log, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+
+
+
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+S26_deptotN_plot_data <- regrid(S26_deptotN_emm_log , transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(S26_deptotN_cld) %>% 
+      select(Treatment_Full, Depth_cm, Site, .group), 
+    by = c("Treatment_Full", "Depth_cm", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+print(S26_deptotN_plot_data)
+
+
+
+#----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
+
+
+
+# ==============================================================================
+# 1. Simplified Data Wrangling (No complex indexing or middle-bar math)
+# ==============================================================================
+S26_deptotN_plot_data <- S26_deptotN_plot_data %>%
+  group_by(Site, Depth_cm) %>%
+  mutate(
+    # Count unique letters in this site-depth cluster
+    Is_Sig = n_distinct(Letter) > 1,
+    
+    # Layer 1: Individual letters (blanked out if the group is non-significant)
+    Bar_Letter = if_else(Is_Sig, Letter, ""),
+    
+    # Layer 2: Single "n.s." label (placed only on the first row of a non-sig cluster)
+    Cluster_NS = if_else(!Is_Sig & row_number() == 1, "n.s.", ""),
+    
+    # Find the maximum height in this cluster to float the "n.s." label safely
+    Cluster_Max_Y = max(response + SE)
+  ) %>%
+  ungroup()
+
+# ==============================================================================
+# 2. Simplified Plotting Function (No complex positioning for n.s.)
+# ==============================================================================
+S26_plot_site_deptotN<- function(site_name) {
+  S26_deptotN_plot_data %>%
+    filter(Site == site_name) %>%
+    
+    ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
+    # Clustered Bars and Error Bars
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.2
+    ) +
+    
+    # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
+    geom_text(
+      aes(label = Bar_Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.2,
+      fontface = "bold"
+    ) +
+    
+    # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
+    geom_text(
+      aes(label = Cluster_NS, y = Cluster_Max_Y),
+      vjust = -0.8,
+      size = 3.5,
+      fontface = "bold"
+    ) +
+    
+    # Aesthetics & Theme
+    scale_fill_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
+    labs(
+      y = expression(Estimated~Marginal~Mean~Total~Inorganic~N~(kg~ha^-1)),
+      x = "Soil Depth Horizon",
+      fill = "Cover Crop Treatment"
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold", size = 9),
+      legend.text = element_text(size = 8),
+      axis.text = element_text(color = "black", size = 9),
+      panel.grid.major.x = element_blank()
+    ) +
+    guides(fill = guide_legend(ncol = 3))
+}
+
+# ==============================================================================
+# 3. Regenerate the Standalone Objects
+# ==============================================================================
+S26_deptotN_plot_StPaul    <- S26_plot_site_deptotN("Saint Paul")
+S26_deptotN_plot_Waseca    <- S26_plot_site_deptotN("Waseca")
+S26_deptotN_plot_Lamberton <- S26_plot_site_deptotN("Lamberton")
+
+# View a plot in RStudio
+S26_deptotN_plot_StPaul  
+S26_deptotN_plot_Waseca  
+S26_deptotN_plot_Lamberton
+
+
+
+#----S26 3-depth soil Nitrate/Nitrite-N----
+
+
+
+#----EXPLORING THE DATA----
+# ==============================================================================
+# 1. Generate Descriptive Statistics Dataframe
+# ==============================================================================
+S26_Nit_summary <- S26_3depth_soilN %>%
+  group_by(Site, Depth_cm, Treatment_Full) %>%
+  summarize(
+    n    = sum(!is.na(Nitrate_NitriteN_kgha)),
+    mean = mean(Nitrate_NitriteN_kgha, na.rm = TRUE),
+    sd   = sd(Nitrate_NitriteN_kgha, na.rm = TRUE),
+    # Standard Error of the Mean: SE = SD / sqrt(n)
+    se   = sd / sqrt(n),
+    # Coefficient of Variation: CV% = (SD / Mean) * 100
+    cv   = (sd / mean) * 100,
+    .groups = "drop" )
+print(S26_Nit_summary , n = 81)
+
+#----SOIL total in-depth N EXPLORATORY BOXPLOT----
+# ==============================================================================
+# Refined Soil N Boxplot (Linear Scale, High-Contrast Facets)
+# ==============================================================================
+ggplot(S26_3depth_soilN, aes(x = Treatment_Full, y = Nitrate_NitriteN_kgha, fill = Treatment_Full)) +
+  # Boxplot layer with clean lines and no underlying raw data points
+  geom_boxplot(outlier.shape = 16, outlier.size = 1.5, alpha = 0.85, color = "black") +
+  
+  # Facet grid: Depth vertically (metric), Site horizontally
+  facet_grid(Depth_cm ~ Site, scales = "free_y") +
+  
+  # Custom treatment color mapping
+  scale_fill_manual(values = color_map) +
+  
+  # Y-axis label using corrected R mathematical expression syntax
+  labs(
+    x = "Cover Crop Treatment",
+    y = expression(Nitrate/Nitrite-N~(kg~ha^-1))
+  ) +
+  
+  # Set serif font family globally
+  theme_bw(base_family = "serif") +
+  
+  # Visual adjustments for facet banners and labels
+  theme(
+    legend.position = "none",
+    
+    # Rotate and align long treatment names on the horizontal axis
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9, color = "black"),
+    axis.text.y = element_text(size = 9, color = "black"),
+    axis.title  = element_text(face = "bold", size = 11, color = "black"),
+    
+    # Facet strips: Light grey background with a crisp, solid black border
+    strip.background = element_rect(fill = "grey90", color = "black", linewidth = 0.7),
+    strip.text       = element_text(face = "bold", size = 10, color = "black"),
+    
+    # Clean up background grid lines
+    panel.grid.major = element_line(color = "grey95"),
+    panel.grid.minor = element_blank()
+  )
+
+
+#----MODEL----
+
+S26_SoilNit_MOD = lmer(Nitrate_NitriteN_kgha ~ Trt * Depth_cm * Site + (1|Site:Rep),
+                       data = S26_3depth_soilN)
+
+#----CHECKING MODEL----
+# 1. Set up a 1-row, 2-column plotting grid
+par(mfrow = c(1, 2), family = "serif")
+
+# 2. Residuals vs. Fitted (Tests Homoskedasticity / Constant Variance)
+plot(fitted(S26_SoilNit_MOD), residuals(S26_SoilNit_MOD),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+# 3. Normal Q-Q Plot (Tests Normality of Residuals)
+qqnorm(residuals(S26_SoilNit_MOD), main = "Normal Q-Q Plot")
+qqline(residuals(S26_SoilNit_MOD), col = "red", lty = 2)
+
+# Reset plotting grid
+par(mfrow = c(1, 1))
+
+#----TRANSFORMING THE MODEL----
+# 1. Fit the log-transformed model (using the cleaned data)
+S26_SoilNit_logMOD <- lmer(
+  log(Nitrate_NitriteN_kgha + 0.1) ~ Treatment_Full * Depth_cm * Site + (1|Site:Rep),
+  data = S26_3depth_soilN)
+
+# 2. Run diagnostics on the log-transformed model to verify correction
+par(mfrow = c(1, 2), family = "serif")
+plot(fitted(S26_SoilNit_logMOD), residuals(S26_SoilNit_logMOD),
+     xlab = "Fitted Values", ylab = "Residuals", main = "Log-Model: Residuals vs. Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+qqnorm(residuals(S26_SoilNit_logMOD), main = "Log-Model: Q-Q Plot")
+qqline(residuals(S26_SoilNit_logMOD), col = "red", lty = 2)
+par(mfrow = c(1, 1))
+
+
+#----VARIANCE COMPONENTS----
+# Extract and calculate the ICC
+vc <- as.data.frame(VarCorr(S26_SoilNit_logMOD))
+sigma2_block <- vc$vcov[vc$grp == "Site:Rep"]
+sigma2_resid <- vc$vcov[vc$grp == "Residual"]
+
+icc <- sigma2_block / (sigma2_block + sigma2_resid)
+cat("Blocking accounted for", round(icc * 100, 1), "% of the total random variation.\n")
+
+performance::icc(S26_SoilNit_logMOD)
+
+#----MODEL SUMMARY AND ANOVA----
+# 1. Generate the standard model parameter summary
+summary(S26_SoilNit_logMOD)
+
+# 2. Run Type III ANOVA using Satterthwaite ddf
+S26_SoilNit_logANOVA <- anova(S26_SoilNit_logMOD, type = 3, ddf = "Satterthwaite")
+print(S26_SoilNit_logANOVA)
+
+
+#----EXTRACTING EMMEANS AND CLD, BACK-TRANSFORMING----
+
+# ==============================================================================
+# 1. Back-Transform using regrid() for Symmetric Standard Errors (response ± SE)
+# ==============================================================================
+# First, estimate marginal means on the log scale
+S26_SoilNit_emm_log <- emmeans(
+  S26_SoilNit_logMOD, 
+  ~ Treatment_Full|Depth_cm * Site)
+
+# Perform Tukey comparisons and get CLD letters on the log scale (where assumptions hold)
+S26_SoilNit_cld <- cld(
+  S26_SoilNit_emm_log, 
+  alpha = 0.05, 
+  Letters = letters, 
+  adjust = "tukey", 
+  decreasing = TRUE)
+
+
+
+# Convert the grid to the response scale using regrid() for symmetric SEs
+# Then merge the letters back based on all indexing factors
+S26_SoilNit_plot_data <- regrid(S26_SoilNit_emm_log, transform = "response") %>%
+  as.data.frame() %>%
+  left_join(
+    as.data.frame(S26_SoilNit_cld) %>% 
+      select(Treatment_Full, Depth_cm, Site, .group), 
+    by = c("Treatment_Full", "Depth_cm", "Site")
+  ) %>%
+  mutate(Letter = trimws(.group))
+
+print(S26_SoilNit_plot_data)
+
+
+
+#----WEIRD NEW PIPELINE FOR SITE-SPECIFIC GRAPHS----
+
+
+
+# ==============================================================================
+# 1. Simplified Data Wrangling (No complex indexing or middle-bar math)
+# ==============================================================================
+S26_SoilNit_plot_data <- S26_SoilNit_plot_data %>%
+  group_by(Site, Depth_cm) %>%
+  mutate(
+    # Count unique letters in this site-depth cluster
+    Is_Sig = n_distinct(Letter) > 1,
+    
+    # Layer 1: Individual letters (blanked out if the group is non-significant)
+    Bar_Letter = if_else(Is_Sig, Letter, ""),
+    
+    # Layer 2: Single "n.s." label (placed only on the first row of a non-sig cluster)
+    Cluster_NS = if_else(!Is_Sig & row_number() == 1, "n.s.", ""),
+    
+    # Find the maximum height in this cluster to float the "n.s." label safely
+    Cluster_Max_Y = max(response + SE)
+  ) %>%
+  ungroup()
+
+# ==============================================================================
+# 2. Simplified Plotting Function (No complex positioning for n.s.)
+# ==============================================================================
+S26_plot_site_SoilNit<- function(site_name) {
+  S26_SoilNit_plot_data %>%
+    filter(Site == site_name) %>%
+    
+    ggplot(aes(x = Depth_cm, y = response, fill = Treatment_Full)) +
+    # Clustered Bars and Error Bars
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black", alpha = 0.7, width = 0.7) +
+    geom_errorbar(
+      aes(ymin = pmax(0, response - SE), ymax = response + SE),
+      position = position_dodge(width = 0.8),
+      width = 0.2
+    ) +
+    
+    # TEXT LAYER 1: Individual Tukey letters (placed only if significant, dodged)
+    geom_text(
+      aes(label = Bar_Letter, y = response + SE),
+      position = position_dodge(width = 0.8),
+      vjust = -0.5,
+      size = 3.2,
+      fontface = "bold"
+    ) +
+    
+    # TEXT LAYER 2: Single "n.s." label (undodged; naturally centers on the x-axis category)
+    geom_text(
+      aes(label = Cluster_NS, y = Cluster_Max_Y),
+      vjust = -0.8,
+      size = 3.5,
+      fontface = "bold"
+    ) +
+    
+    # Aesthetics & Theme
+    scale_fill_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(mult = c(0.01, 0.22))) +
+    labs(
+      subtitle = paste(site_name),
+      y = expression(bold("Estimated Mean Soil NO")[bold("3")]^bold("-")*bold
+                     ("/NO")[bold("2")]^bold("-")~bold("(kg ha")^bold("-1")*bold(")")),
+      x = NULL,
+      fill = "Cover Crop Treatment"
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      axis.text.x = element_text(color = "black", size = 14, face = "bold"),
+      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.y = element_text(size = 12, color = "black", face = "bold"),
+      legend.position = "bottom",
+      legend.box = "vertical",
+      legend.spacing.y = unit(0.2, "cm"),
+      legend.text = element_text(size = 9),
+      legend.title = element_text(face = "bold", size = 10),
+      plot.subtitle = element_text(face = "bold", size = 11)
+    )
+}
+
+# ==============================================================================
+# 3. Regenerate the Standalone Objects
+# ==============================================================================
+S26_SoilNit_plot_StPaul    <- S26_plot_site_SoilNit("Saint Paul")
+S26_SoilNit_plot_Waseca    <- S26_plot_site_SoilNit("Waseca")
+S26_SoilNit_plot_Lamberton <- S26_plot_site_SoilNit("Lamberton")
+
+# View a plot in RStudio
+S26_SoilNit_plot_StPaul  
+S26_SoilNit_plot_Waseca  
+S26_SoilNit_plot_Lamberton
+
+
+
+
+# Suppress x-axis text/ticks on top two subplots (St. Paul & Waseca)
+S26_SoilNit_plot_StPaul <- S26_SoilNit_plot_StPaul + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+S26_SoilNit_plot_Waseca   <- S26_SoilNit_plot_Waseca   + 
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+S26_SoilNit_plot_Lamberton <- S26_SoilNit_plot_Lamberton +
+  labs(x = "Depth (cm)") +
+  theme(
+    axis.title.x = element_text(face = "bold", size = 12, margin = margin(t = 8, b = 5))
+  )
+
+# 2. Assemble stacked patchwork without using plot_annotation caption
+S26_SoilNit_composite_figure <- (S26_SoilNit_plot_StPaul / S26_SoilNit_plot_Waseca / S26_SoilNit_plot_Lamberton) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    tag_levels = "a", 
+    tag_prefix = "(", 
+    tag_suffix = ")"
+  ) &
+  theme(
+    legend.position = "bottom",
+    legend.box.margin = margin(t = 5, r = 30, b = 5, l = 0),
+    legend.justification = "center",
+    plot.tag = element_text(face = "bold", size = 11, family = "serif"),
+    plot.title = element_text(face = "bold", size = 13, family = "serif")
+  )
+
+# 3. Direct Disk Export
+ggsave(
+  filename = "S26_Composite_SoilNit.png",
+  plot = S26_SoilNit_composite_figure,
+  width = 8.5,
+  height = 12,
+  dpi = 300,
+  device = "png"
+)
+
+
+
+
+
+
+

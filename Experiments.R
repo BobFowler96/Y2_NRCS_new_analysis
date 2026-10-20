@@ -23,6 +23,51 @@ library("tibble")
 library("webshot2")
 
 
+#for lm ANOVA export car::Anova()
+
+F24_CC_CNrat_ANOVA %>%
+  tidy() %>%
+  select(
+    Source = term,
+    `Sum Sq` = sumsq,
+    Df = df,
+    `F value` = statistic,
+    `Pr(>F)` = p.value
+  ) %>%
+  mutate(`Pr(>F)` = format(`Pr(>F)`, scientific = FALSE, digits = 4)) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+
+
+# for lmer anova() ANOVA
+
+F24_CC_CNrat_plot_data %>%
+  select(Site, Treatment_Full, response, SE, Letter) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+
+
+
+
+# getting the emmeans, SEs and cld to copy to google sheets neatly
+
+F24_CC_CNrat_plot_data %>%
+  select(Site, Treatment_Full, response, SE, Letter) %>%
+  {
+    cat(paste(colnames(.), collapse = "\t"), "\n")
+    apply(., 1, function(x) cat(paste(x, collapse = "\t"), "\n"))
+  }
+
+
+
+
+
 # 1. Data Wrangling & Mutate Deployment Labels
 F24XS25_ER_three_phase <- F24XS25_ERXAGBM_dat %>%
   # Exclude 'No CC' and 'Oat + Radish' ONLY at Lamberton in Spring 2025

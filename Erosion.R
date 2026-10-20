@@ -1212,7 +1212,74 @@ ggplot(er_add_resp, aes(x = Precip_cumul_mm, y = response, color = Biomass_Facto
 
 
 
+#----This might be correct version of the above model----
 
+# 1. Fit model with response transformation directly inside formula
+# This allows emmeans to automatically handle log back-transformation and Delta SEs correctly
+SWCS_ER_add_mod <- lmer(
+  log(ER_gm2day) ~ log(AGBM_kgha + 1) + Precip_cumul_mm + (1 | Site), 
+  data = F24XS25_ERXAGBM_dat
+)
+
+# 2. Type III ANOVA using Kenward-Roger approximation
+# Place directly after model fitting to evaluate interaction significance
+er_anova_kr <- car::Anova(SWCS_ER_int_mod, type = "III", test.statistic = "F") 
+# Note: car defaults to Kenward-Roger when test.statistic = "F" for lmer objects (requires 'pbkrtest')
+
+print(er_anova_kr)
+
+# 3. Alternative using lmerTest explicitly setting ddf
+anova(SWCS_ER_int_mod, type = 3, ddf = "Kenward-Roger")
+
+# 2. Extract Slopes (Marginal Trends)
+precip_slope  <- emtrends(SWCS_ER_add_mod, ~ 1, var = "Precip_cumul_mm")
+biomass_slope <- emtrends(SWCS_ER_add_mod, ~ 1, var = "log(AGBM_kgha + 1)")
+
+# 3. Generate Grid and Back-transform in a single emmeans call
+# Setting type = "response" directly inside emmeans applies the Delta Method 
+# and aligns with the log(AGBM_kgha + 1) term accurately.
+er_add_resp <- emmeans(
+  SWCS_ER_add_mod,
+  ~ AGBM_kgha * Precip_cumul_mm,
+  at = list(
+    AGBM_kgha = c(0, 500, 2000, 5000, 10000),
+    Precip_cumul_mm = c(0, 10, 50, 100, 200)
+  ),
+  type = "response"
+) %>% 
+  as.data.frame() %>%
+  mutate(Biomass_Factor = factor(round(AGBM_kgha)))
+
+# 4. Streamlined ggplot (matching your clean theme preferences)
+ggplot(er_add_resp, aes(x = Precip_cumul_mm, y = response, color = Biomass_Factor, group = Biomass_Factor)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(
+    aes(ymin = pmax(0, response - SE), ymax = response + SE), 
+    width = 5, 
+    linewidth = 0.6
+  ) +
+  scale_color_viridis_d(
+    option = "inferno", begin = 0.15, end = 0.90,
+    name = expression(Cover~Crop~Biomass~(kg~ha^-1))
+  ) +
+  labs(
+    title = "Model-Predicted Water-Borne Sediment Erosion",
+    subtitle = "Interacting Effects of Cumulative Precipitation and Cover Crop Biomass",
+    x = "Cumulative Precipitation (mm)",
+    y = expression(Water-Borne~Sediment~Erosion~(g~m^-2~day^-1)),
+    caption = paste0(
+      "Lines represent back-transformed estimated marginal means.\n",
+      "Error bars represent Delta-method approximated ±1 SE."
+    )
+  ) +
+  theme_bw(base_family = "serif") +
+  theme(
+    legend.position = "bottom",
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(size = 11),
+    panel.grid.minor = element_blank()
+  )
 
 
 
